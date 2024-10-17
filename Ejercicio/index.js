@@ -4,7 +4,6 @@ const { Engine, Render, World, Bodies, Body, Events } = Matter;
 
 class App {
     constructor(params = {}) {
-        //Puedo agregar los que yo necesite, solo que este bien organizado.
         this.initCanvas();
         this.initPhysics();
         this.initBodies();
@@ -39,7 +38,7 @@ class App {
 
         this.engine = Engine.create();
         this.world = this.engine.world;
-        this.world.gravity.y = 0.2; // Adding gravity to fireworks
+        this.world.gravity.y = 0.05; // Adding gravity to fireworks
 
         this.render = Render.create({
             element: document.body,
@@ -70,24 +69,27 @@ class App {
         });
     }
 
+    // Create fireworks with a single color for each explosion and fade out effect
     createFireworks(x, y) {
         const getRandomColor = () => {
             const colors = ['#ff4040', '#ffdd40', '#40ffdd', '#40a6ff', '#a640ff'];
             return colors[Math.floor(Math.random() * colors.length)];
         };
 
-        const fireworkColor = getRandomColor();
+        const fireworkColor = getRandomColor(); // Assign a single color to this firework
 
-
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 200; i++) {
             const radius = Math.random() * 3 + 2;
 
             const particle = Bodies.circle(x, y, radius, {
                 restitution: 0.9,
                 friction: 0.01,
-                render: { fillStyle: fireworkColor } // Aqui todas las perticulas se vuelven del mismo color 
+                render: { fillStyle: fireworkColor }
             });
 
+            // Add opacity and a lifespan (time before the particle disappears)
+            particle.opacity = 1.0;  // Start with full opacity
+            particle.fadeSpeed = 0.005; // Speed at which opacity decreases
 
             const forceMagnitude = 0.03 + Math.random() * 0.05;
             Body.setVelocity(particle, {
@@ -108,11 +110,20 @@ class App {
         this.particles.forEach((particle, index) => {
             this.ctx.beginPath();
             this.ctx.arc(particle.position.x, particle.position.y, particle.circleRadius, 0, Math.PI * 2);
-            this.ctx.fillStyle = particle.render.fillStyle;
+            
+            // Reduce opacity gradually
+            particle.opacity -= particle.fadeSpeed;
+
+            if (particle.opacity < .005) {
+                particle.opacity = 0;
+            }
+
+            // Set the fill style with opacity
+            this.ctx.fillStyle = `rgba(${parseInt(particle.render.fillStyle.slice(1, 3), 16)}, ${parseInt(particle.render.fillStyle.slice(3, 5), 16)}, ${parseInt(particle.render.fillStyle.slice(5, 7), 16)}, ${particle.opacity})`;
             this.ctx.fill();
 
-
-            if (particle.position.y > this.canvas.height || particle.position.x < 0 || particle.position.x > this.canvas.width) {
+            // Remove the particle if it's off-screen or fully transparent
+            if (particle.position.y > this.canvas.height || particle.position.x < 0 || particle.position.x > this.canvas.width || particle.opacity <= 0) {
                 World.remove(this.world, particle);
                 this.particles.splice(index, 1);
             }
@@ -122,5 +133,5 @@ class App {
     }
 }
 
-// Hay que agregar esto por que sino no funciona 
+// Instantiate the App class
 const app = new App();
